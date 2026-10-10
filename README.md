@@ -1,30 +1,30 @@
 # 🍽️ Recipe App (Catppuccin Theme)
 
-Минималистичное Progressive Web App (PWA) для хранения собственных рецептов и удобного расчета КБЖУ (макронутриентов) под вашу порцию. Создано с акцентом на скорость, удобство на кухне и отсутствие лишнего визуального шума.
+A minimalist Progressive Web App (PWA) to store your personal recipes and easily calculate macros (calories, protein, fats, carbs) for your exact portion size. Built with a focus on speed, kitchen usability, and zero visual clutter.
 
-## ✨ Фичи
-- **Строгий минимализм**: Никаких лент новостей, чужих рецептов и баннеров. Только ваши рецепты.
-- **Умный расчет КБЖУ**: Вводите ингредиенты в граммах или штуках. При готовке просто укажите вес своей порции, и приложение моментально рассчитает макросы (КБЖУ) именно для вашей тарелки.
-- **Интеграция с Yazio / FatSecret**: Умный текст генерируется в 1 клик для удобного копирования макросов в трекеры.
-- **PWA (Progressive Web App)**: Устанавливается на Android и iOS как нативное приложение (открывается в отдельном окне без интерфейса браузера).
-- **Темная тема**: Выполнено в популярной и приятной для глаз палитре **Catppuccin**.
+## ✨ Features
+- **Strict Minimalism**: No news feeds, no ads, no clutter. Just your personal recipes.
+- **Smart Macro Calculator**: Add ingredients in grams or pieces. When cooking, just enter the weight of your actual portion, and the app instantly calculates the exact macros for your plate.
+- **Yazio / FatSecret Integration**: Generates a 1-click copyable text string to quickly log your macros into any fitness tracker.
+- **PWA (Progressive Web App)**: Installable natively on Android and iOS (runs fast in a standalone window, without browser UI).
+- **Dark Theme**: Designed using the popular and eye-friendly **Catppuccin** color palette.
 
-## 🛠️ Стек технологий
+## 🛠️ Tech Stack
 - **Frontend**: React + Vite + Tailwind CSS + Lucide Icons + VitePWA
 - **Backend**: Python + FastAPI
-- **База данных**: SQLite (локальный файл `database.sqlite` — никаких сложных СУБД)
-- **Инфраструктура**: Docker + Docker Compose
+- **Database**: SQLite (local `database.sqlite` file — no complex DBMS required)
+- **Deployment**: Docker + Docker Compose
 
-## 🚀 Запуск (через Docker)
+## 🚀 How to Run (Docker)
 
-Для запуска на собственном сервере достаточно иметь установленный `docker` и `docker-compose`.
+To run this on your own server, you only need `docker` and `docker-compose`.
 
 ```bash
 git clone https://github.com/PetroProg/Recipe-App.git
 cd Recipe-App
 docker compose up -d --build
 ```
-Приложение запустится в фоне и будет доступно на порту `9090` (порт настраивается в `docker-compose.yml`).
+The app will run in the background and will be accessible on port `9090` (configurable in `docker-compose.yml`).
 
-## 📜 Лицензия
-Этот проект распространяется под лицензией [MIT](LICENSE). Вы можете свободно использовать, изменять и распространять этот код.
+## 📜 License
+This project is licensed under the [MIT License](LICENSE). You are free to use, modify, and distribute this code.
