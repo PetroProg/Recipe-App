@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  recipe-app:
+    build: .
+    container_name: recipe_app
+    ports:
+      - "9090:8000"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

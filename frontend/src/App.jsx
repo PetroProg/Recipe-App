@@ -1,0 +1,266 @@
+import { useState, useEffect } from 'react'
+import { Plus, ChevronLeft, Trash2, Copy, Check } from 'lucide-react'
+
+export default function App() {
+  const [recipes, setRecipes] = useState([])
+  const [view, setView] = useState('list') // 'list', 'detail', 'create'
+  const [selectedRecipe, setSelectedRecipe] = useState(null)
+  
+  useEffect(() => {
+    fetchRecipes()
+  }, [])
+
+  const fetchRecipes = async () => {
+    try {
+      const res = await fetch('/api/recipes')
+      const data = await res.json()
+      setRecipes(data)
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const deleteRecipe = async (id) => {
+    if(!confirm("Удалить рецепт?")) return;
+    await fetch(`/api/recipes/${id}`, { method: 'DELETE' })
+    fetchRecipes()
+    setView('list')
+  }
+
+  const openRecipe = (r) => {
+    setSelectedRecipe(r)
+    setView('detail')
+  }
+
+  return (
+    <div className="min-h-screen bg-base text-text">
+      {view === 'list' && (
+        <RecipeList 
+          recipes={recipes} 
+          onOpen={openRecipe} 
+          onCreate={() => setView('create')} 
+        />
+      )}
+      {view === 'detail' && (
+        <RecipeDetail 
+          recipe={selectedRecipe} 
+          onBack={() => setView('list')} 
+          onDelete={() => deleteRecipe(selectedRecipe.id)}
+        />
+      )}
+      {view === 'create' && (
+        <RecipeCreate 
+          onBack={() => setView('list')} 
+          onSave={() => { setView('list'); fetchRecipes(); }} 
+        />
+      )}
+    </div>
+  )
+}
+
+function RecipeList({ recipes, onOpen, onCreate }) {
+  return (
+    <div className="p-4 max-w-md mx-auto">
+      <div className="flex justify-between items-center mb-6 mt-4">
+        <h1 className="text-3xl font-bold">Мои Рецепты</h1>
+        <button onClick={onCreate} className="p-2 bg-surface0 rounded-xl text-lavender hover:bg-mantle">
+          <Plus size={24} />
+        </button>
+      </div>
+      <div className="space-y-3">
+        {recipes.length === 0 && <p className="text-subtext0 text-center mt-10">Нет рецептов</p>}
+        {recipes.map(r => (
+          <div 
+            key={r.id} 
+            onClick={() => onOpen(r)}
+            className="p-5 bg-surface0 rounded-2xl flex justify-between items-center cursor-pointer border border-transparent hover:border-surface1 active:scale-[0.98] transition-transform"
+          >
+            <h2 className="text-xl font-medium">{r.title}</h2>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function RecipeDetail({ recipe, onBack, onDelete }) {
+  const [copied, setCopied] = useState(false)
+
+  // Calculate Macros
+  let totalKcal = 0, totalP = 0, totalF = 0, totalC = 0;
+  recipe.ingredients.forEach(i => {
+    const factor = i.amount / 100;
+    totalKcal += i.calories_per_100g * factor;
+    totalP += i.protein_per_100g * factor;
+    totalF += i.fat_per_100g * factor;
+    totalC += i.carbs_per_100g * factor;
+  })
+
+  const factor100 = 100 / (recipe.final_weight || 1);
+  const mKcal = Math.round(totalKcal * factor100);
+  const mP = (totalP * factor100).toFixed(1);
+  const mF = (totalF * factor100).toFixed(1);
+  const mC = (totalC * factor100).toFixed(1);
+
+  const yazioText = `${recipe.title} ${mKcal} ккал (Б:${mP} Ж:${mF} У:${mC}) на 100г`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(yazioText)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="p-4 max-w-md mx-auto pb-10">
+      <div className="flex justify-between items-center mb-6 mt-4">
+        <button onClick={onBack} className="p-2 -ml-2 text-lavender">
+          <ChevronLeft size={28} />
+        </button>
+        <button onClick={onDelete} className="p-2 text-red-400">
+          <Trash2 size={22} />
+        </button>
+      </div>
+
+      <h1 className="text-3xl font-bold mb-8">{recipe.title}</h1>
+
+      <h2 className="text-xl font-semibold mb-3 text-lavender">Ингредиенты</h2>
+      <div className="bg-surface0 rounded-2xl p-4 mb-8 space-y-2">
+        {recipe.ingredients.map((i, idx) => (
+          <div key={idx} className="flex justify-between border-b border-mantle last:border-0 pb-2 last:pb-0 pt-2 first:pt-0">
+            <span className="text-text">{i.name}</span>
+            <span className="text-subtext0">{i.amount} г</span>
+          </div>
+        ))}
+      </div>
+
+      <h2 className="text-xl font-semibold mb-3 text-lavender">Приготовление</h2>
+      <div className="bg-surface0 rounded-2xl p-4 mb-8 space-y-4">
+        {recipe.steps.map((s, idx) => (
+          <div key={idx} className="flex gap-3">
+            <span className="text-peach font-bold">{idx + 1}.</span>
+            <span className="text-text leading-relaxed">{s}</span>
+          </div>
+        ))}
+      </div>
+
+      <h2 className="text-xl font-semibold mb-3 text-lavender">КБЖУ на 100г</h2>
+      <div className="bg-surface0 rounded-2xl p-4">
+        <div className="flex justify-between mb-4">
+          <div className="text-center"><div className="text-lg font-bold text-text">{mKcal}</div><div className="text-xs text-subtext0">Ккал</div></div>
+          <div className="text-center"><div className="text-lg font-bold text-green">{mP}</div><div className="text-xs text-subtext0">Белки</div></div>
+          <div className="text-center"><div className="text-lg font-bold text-peach">{mF}</div><div className="text-xs text-subtext0">Жиры</div></div>
+          <div className="text-center"><div className="text-lg font-bold text-lavender">{mC}</div><div className="text-xs text-subtext0">Углеводы</div></div>
+        </div>
+        
+        <div className="mt-4 p-3 bg-mantle rounded-xl flex items-center justify-between cursor-pointer" onClick={handleCopy}>
+          <span className="text-sm font-mono text-subtext0 break-all pr-2">{yazioText}</span>
+          {copied ? <Check size={20} className="text-green flex-shrink-0" /> : <Copy size={20} className="text-lavender flex-shrink-0" />}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function RecipeCreate({ onBack, onSave }) {
+  const [title, setTitle] = useState('')
+  const [finalWeight, setFinalWeight] = useState('')
+  const [ingredients, setIngredients] = useState([{ name: '', amount: '', calories_per_100g: '', protein_per_100g: '', fat_per_100g: '', carbs_per_100g: '' }])
+  const [steps, setSteps] = useState([''])
+
+  const save = async () => {
+    const payload = {
+      title,
+      final_weight: parseFloat(finalWeight),
+      ingredients: ingredients.map(i => ({
+        name: i.name,
+        amount: parseFloat(i.amount),
+        calories_per_100g: parseFloat(i.calories_per_100g),
+        protein_per_100g: parseFloat(i.protein_per_100g),
+        fat_per_100g: parseFloat(i.fat_per_100g),
+        carbs_per_100g: parseFloat(i.carbs_per_100g),
+      })),
+      steps: steps.filter(s => s.trim() !== '')
+    }
+
+    await fetch('/api/recipes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    onSave()
+  }
+
+  return (
+    <div className="p-4 max-w-md mx-auto pb-20">
+      <div className="flex justify-between items-center mb-6 mt-4">
+        <button onClick={onBack} className="p-2 -ml-2 text-lavender">
+          <ChevronLeft size={28} />
+        </button>
+        <h1 className="text-xl font-bold">Новый рецепт</h1>
+        <button onClick={save} className="text-green font-bold px-2">Сохранить</button>
+      </div>
+
+      <div className="space-y-4">
+        <input 
+          className="w-full bg-surface0 p-3 rounded-xl outline-none" 
+          placeholder="Название блюда" 
+          value={title} onChange={e => setTitle(e.target.value)} 
+        />
+
+        <h3 className="font-semibold text-lavender mt-4">Ингредиенты</h3>
+        {ingredients.map((ing, idx) => (
+          <div key={idx} className="bg-surface0 p-3 rounded-xl space-y-2">
+            <input className="w-full bg-mantle p-2 rounded outline-none" placeholder="Название (напр. Курица)" value={ing.name} onChange={e => {
+              const newI = [...ingredients]; newI[idx].name = e.target.value; setIngredients(newI)
+            }}/>
+            <div className="flex gap-2">
+              <input className="w-1/2 bg-mantle p-2 rounded outline-none" type="number" placeholder="Вес (г)" value={ing.amount} onChange={e => {
+                const newI = [...ingredients]; newI[idx].amount = e.target.value; setIngredients(newI)
+              }}/>
+              <input className="w-1/2 bg-mantle p-2 rounded outline-none" type="number" placeholder="Ккал/100г" value={ing.calories_per_100g} onChange={e => {
+                const newI = [...ingredients]; newI[idx].calories_per_100g = e.target.value; setIngredients(newI)
+              }}/>
+            </div>
+            <div className="flex gap-2">
+              <input className="w-1/3 bg-mantle p-2 rounded outline-none text-sm" type="number" placeholder="Б (на 100)" value={ing.protein_per_100g} onChange={e => {
+                const newI = [...ingredients]; newI[idx].protein_per_100g = e.target.value; setIngredients(newI)
+              }}/>
+              <input className="w-1/3 bg-mantle p-2 rounded outline-none text-sm" type="number" placeholder="Ж (на 100)" value={ing.fat_per_100g} onChange={e => {
+                const newI = [...ingredients]; newI[idx].fat_per_100g = e.target.value; setIngredients(newI)
+              }}/>
+              <input className="w-1/3 bg-mantle p-2 rounded outline-none text-sm" type="number" placeholder="У (на 100)" value={ing.carbs_per_100g} onChange={e => {
+                const newI = [...ingredients]; newI[idx].carbs_per_100g = e.target.value; setIngredients(newI)
+              }}/>
+            </div>
+          </div>
+        ))}
+        <button onClick={() => setIngredients([...ingredients, { name: '', amount: '', calories_per_100g: '', protein_per_100g: '', fat_per_100g: '', carbs_per_100g: '' }])} className="w-full py-2 border border-surface0 rounded-xl text-subtext0">
+          + Добавить ингредиент
+        </button>
+
+        <h3 className="font-semibold text-lavender mt-4">Шаги приготовления</h3>
+        {steps.map((s, idx) => (
+          <textarea 
+            key={idx}
+            className="w-full bg-surface0 p-3 rounded-xl outline-none min-h-[80px]" 
+            placeholder={`Шаг ${idx + 1}`} 
+            value={s} onChange={e => {
+              const newS = [...steps]; newS[idx] = e.target.value; setSteps(newS)
+            }} 
+          />
+        ))}
+        <button onClick={() => setSteps([...steps, ''])} className="w-full py-2 border border-surface0 rounded-xl text-subtext0">
+          + Добавить шаг
+        </button>
+
+        <h3 className="font-semibold text-lavender mt-4">Итог</h3>
+        <input 
+          className="w-full bg-surface0 p-3 rounded-xl outline-none" 
+          type="number"
+          placeholder="Вес ГОТОВОГО блюда (г)" 
+          value={finalWeight} onChange={e => setFinalWeight(e.target.value)} 
+        />
+      </div>
+    </div>
+  )
+}
