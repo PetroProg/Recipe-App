@@ -50,11 +50,12 @@ def get_db():
 # Pydantic models
 class Ingredient(BaseModel):
     name: str
-    amount: float # in grams
+    amount: float # in grams or pieces
     calories_per_100g: float
     protein_per_100g: float
     fat_per_100g: float
     carbs_per_100g: float
+    unit: str = "g"
 
 class RecipeCreate(BaseModel):
     title: str

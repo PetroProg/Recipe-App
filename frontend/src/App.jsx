@@ -89,7 +89,8 @@ function RecipeDetail({ recipe, onBack, onDelete }) {
   // Calculate Macros
   let totalKcal = 0, totalP = 0, totalF = 0, totalC = 0;
   recipe.ingredients.forEach(i => {
-    const factor = i.amount / 100;
+    const unit = i.unit || 'g';
+    const factor = unit === 'g' ? i.amount / 100 : i.amount;
     totalKcal += i.calories_per_100g * factor;
     totalP += i.protein_per_100g * factor;
     totalF += i.fat_per_100g * factor;
@@ -128,7 +129,7 @@ function RecipeDetail({ recipe, onBack, onDelete }) {
         {recipe.ingredients.map((i, idx) => (
           <div key={idx} className="flex justify-between border-b border-mantle last:border-0 pb-2 last:pb-0 pt-2 first:pt-0">
             <span className="text-text">{i.name}</span>
-            <span className="text-subtext0">{i.amount} г</span>
+            <span className="text-subtext0">{i.amount} {i.unit === 'pcs' ? 'шт' : 'г'}</span>
           </div>
         ))}
       </div>
@@ -164,7 +165,7 @@ function RecipeDetail({ recipe, onBack, onDelete }) {
 function RecipeCreate({ onBack, onSave }) {
   const [title, setTitle] = useState('')
   const [finalWeight, setFinalWeight] = useState('')
-  const [ingredients, setIngredients] = useState([{ name: '', amount: '', calories_per_100g: '', protein_per_100g: '', fat_per_100g: '', carbs_per_100g: '' }])
+  const [ingredients, setIngredients] = useState([{ name: '', amount: '', unit: 'g', calories_per_100g: '', protein_per_100g: '', fat_per_100g: '', carbs_per_100g: '' }])
   const [steps, setSteps] = useState([''])
 
   const save = async () => {
@@ -174,6 +175,7 @@ function RecipeCreate({ onBack, onSave }) {
       ingredients: ingredients.map(i => ({
         name: i.name,
         amount: parseFloat(i.amount),
+        unit: i.unit,
         calories_per_100g: parseFloat(i.calories_per_100g),
         protein_per_100g: parseFloat(i.protein_per_100g),
         fat_per_100g: parseFloat(i.fat_per_100g),
@@ -214,27 +216,33 @@ function RecipeCreate({ onBack, onSave }) {
               const newI = [...ingredients]; newI[idx].name = e.target.value; setIngredients(newI)
             }}/>
             <div className="flex gap-2">
-              <input className="w-1/2 bg-mantle p-2 rounded outline-none" type="number" placeholder="Вес (г)" value={ing.amount} onChange={e => {
+              <input className="w-1/3 bg-mantle p-2 rounded outline-none" type="number" placeholder="Кол-во" value={ing.amount} onChange={e => {
                 const newI = [...ingredients]; newI[idx].amount = e.target.value; setIngredients(newI)
               }}/>
-              <input className="w-1/2 bg-mantle p-2 rounded outline-none" type="number" placeholder="Ккал/100г" value={ing.calories_per_100g} onChange={e => {
+              <select className="w-1/3 bg-mantle p-2 rounded outline-none text-sm" value={ing.unit} onChange={e => {
+                const newI = [...ingredients]; newI[idx].unit = e.target.value; setIngredients(newI)
+              }}>
+                <option value="g">г</option>
+                <option value="pcs">шт</option>
+              </select>
+              <input className="w-1/3 bg-mantle p-2 rounded outline-none text-sm" type="number" placeholder={ing.unit === 'g' ? "Ккал/100г" : "Ккал/1шт"} value={ing.calories_per_100g} onChange={e => {
                 const newI = [...ingredients]; newI[idx].calories_per_100g = e.target.value; setIngredients(newI)
               }}/>
             </div>
             <div className="flex gap-2">
-              <input className="w-1/3 bg-mantle p-2 rounded outline-none text-sm" type="number" placeholder="Б (на 100)" value={ing.protein_per_100g} onChange={e => {
+              <input className="w-1/3 bg-mantle p-2 rounded outline-none text-sm" type="number" placeholder={ing.unit === 'g' ? "Б (на 100)" : "Б (на 1шт)"} value={ing.protein_per_100g} onChange={e => {
                 const newI = [...ingredients]; newI[idx].protein_per_100g = e.target.value; setIngredients(newI)
               }}/>
-              <input className="w-1/3 bg-mantle p-2 rounded outline-none text-sm" type="number" placeholder="Ж (на 100)" value={ing.fat_per_100g} onChange={e => {
+              <input className="w-1/3 bg-mantle p-2 rounded outline-none text-sm" type="number" placeholder={ing.unit === 'g' ? "Ж (на 100)" : "Ж (на 1шт)"} value={ing.fat_per_100g} onChange={e => {
                 const newI = [...ingredients]; newI[idx].fat_per_100g = e.target.value; setIngredients(newI)
               }}/>
-              <input className="w-1/3 bg-mantle p-2 rounded outline-none text-sm" type="number" placeholder="У (на 100)" value={ing.carbs_per_100g} onChange={e => {
+              <input className="w-1/3 bg-mantle p-2 rounded outline-none text-sm" type="number" placeholder={ing.unit === 'g' ? "У (на 100)" : "У (на 1шт)"} value={ing.carbs_per_100g} onChange={e => {
                 const newI = [...ingredients]; newI[idx].carbs_per_100g = e.target.value; setIngredients(newI)
               }}/>
             </div>
           </div>
         ))}
-        <button onClick={() => setIngredients([...ingredients, { name: '', amount: '', calories_per_100g: '', protein_per_100g: '', fat_per_100g: '', carbs_per_100g: '' }])} className="w-full py-2 border border-surface0 rounded-xl text-subtext0">
+        <button onClick={() => setIngredients([...ingredients, { name: '', amount: '', unit: 'g', calories_per_100g: '', protein_per_100g: '', fat_per_100g: '', carbs_per_100g: '' }])} className="w-full py-2 border border-surface0 rounded-xl text-subtext0">
           + Добавить ингредиент
         </button>
 
