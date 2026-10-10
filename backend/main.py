@@ -91,8 +91,6 @@ def create_recipe(recipe: RecipeCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_recipe)
     
-    # TODO: Trigger Google Drive Backup here
-    
     return RecipeResponse(
         id=db_recipe.id,
         title=db_recipe.title,
