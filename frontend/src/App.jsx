@@ -33,7 +33,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-base text-text">
+    <div className="min-h-screen bg-base text-text pb-10">
       {view === 'list' && (
         <RecipeList 
           recipes={recipes} 
@@ -85,6 +85,7 @@ function RecipeList({ recipes, onOpen, onCreate }) {
 
 function RecipeDetail({ recipe, onBack, onDelete }) {
   const [copied, setCopied] = useState(false)
+  const [portion, setPortion] = useState(100)
 
   // Calculate Macros
   let totalKcal = 0, totalP = 0, totalF = 0, totalC = 0;
@@ -97,13 +98,13 @@ function RecipeDetail({ recipe, onBack, onDelete }) {
     totalC += i.carbs_per_100g * factor;
   })
 
-  const factor100 = 100 / (recipe.final_weight || 1);
-  const mKcal = Math.round(totalKcal * factor100);
-  const mP = (totalP * factor100).toFixed(1);
-  const mF = (totalF * factor100).toFixed(1);
-  const mC = (totalC * factor100).toFixed(1);
+  const factor = (portion || 0) / (recipe.final_weight || 1);
+  const mKcal = Math.round(totalKcal * factor);
+  const mP = (totalP * factor).toFixed(1);
+  const mF = (totalF * factor).toFixed(1);
+  const mC = (totalC * factor).toFixed(1);
 
-  const yazioText = `${recipe.title} ${mKcal} ккал (Б:${mP} Ж:${mF} У:${mC}) на 100г`;
+  const yazioText = `${recipe.title} ${portion}г: ${mKcal} ккал (Б:${mP} Ж:${mF} У:${mC})`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(yazioText)
@@ -144,16 +145,29 @@ function RecipeDetail({ recipe, onBack, onDelete }) {
         ))}
       </div>
 
-      <h2 className="text-xl font-semibold mb-3 text-lavender">КБЖУ на 100г</h2>
-      <div className="bg-surface0 rounded-2xl p-4">
-        <div className="flex justify-between mb-4">
-          <div className="text-center"><div className="text-lg font-bold text-text">{mKcal}</div><div className="text-xs text-subtext0">Ккал</div></div>
-          <div className="text-center"><div className="text-lg font-bold text-green">{mP}</div><div className="text-xs text-subtext0">Белки</div></div>
-          <div className="text-center"><div className="text-lg font-bold text-peach">{mF}</div><div className="text-xs text-subtext0">Жиры</div></div>
-          <div className="text-center"><div className="text-lg font-bold text-lavender">{mC}</div><div className="text-xs text-subtext0">Углеводы</div></div>
+      <h2 className="text-xl font-semibold mb-3 text-lavender">Калькулятор КБЖУ</h2>
+      <div className="bg-surface0 rounded-2xl p-4 mb-6">
+        <div className="flex items-center justify-between mb-6 bg-mantle p-3 rounded-xl">
+          <span className="text-text font-medium">Вес вашей порции:</span>
+          <div className="flex items-center gap-2">
+            <input 
+              type="number" 
+              className="bg-surface0 text-text p-2 rounded-lg outline-none w-20 text-center font-bold"
+              value={portion}
+              onChange={e => setPortion(e.target.value)}
+            />
+            <span className="text-subtext0">г</span>
+          </div>
+        </div>
+
+        <div className="flex justify-between mb-6">
+          <div className="text-center"><div className="text-xl font-bold text-text">{mKcal}</div><div className="text-xs text-subtext0">Ккал</div></div>
+          <div className="text-center"><div className="text-xl font-bold text-green">{mP}</div><div className="text-xs text-subtext0">Белки</div></div>
+          <div className="text-center"><div className="text-xl font-bold text-peach">{mF}</div><div className="text-xs text-subtext0">Жиры</div></div>
+          <div className="text-center"><div className="text-xl font-bold text-lavender">{mC}</div><div className="text-xs text-subtext0">Углеводы</div></div>
         </div>
         
-        <div className="mt-4 p-3 bg-mantle rounded-xl flex items-center justify-between cursor-pointer" onClick={handleCopy}>
+        <div className="p-3 bg-mantle rounded-xl flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform" onClick={handleCopy}>
           <span className="text-sm font-mono text-subtext0 break-all pr-2">{yazioText}</span>
           {copied ? <Check size={20} className="text-green flex-shrink-0" /> : <Copy size={20} className="text-lavender flex-shrink-0" />}
         </div>
@@ -199,17 +213,17 @@ function RecipeCreate({ onBack, onSave }) {
           <ChevronLeft size={28} />
         </button>
         <h1 className="text-xl font-bold">Новый рецепт</h1>
-        <button onClick={save} className="text-green font-bold px-2">Сохранить</button>
+        <div className="w-10"></div>
       </div>
 
       <div className="space-y-4">
         <input 
-          className="w-full bg-surface0 p-3 rounded-xl outline-none" 
+          className="w-full bg-surface0 p-3 rounded-xl outline-none text-lg font-medium" 
           placeholder="Название блюда" 
           value={title} onChange={e => setTitle(e.target.value)} 
         />
 
-        <h3 className="font-semibold text-lavender mt-4">Ингредиенты</h3>
+        <h3 className="font-semibold text-lavender mt-6">Ингредиенты</h3>
         {ingredients.map((ing, idx) => (
           <div key={idx} className="bg-surface0 p-3 rounded-xl space-y-2">
             <input className="w-full bg-mantle p-2 rounded outline-none" placeholder="Название (напр. Курица)" value={ing.name} onChange={e => {
@@ -242,11 +256,11 @@ function RecipeCreate({ onBack, onSave }) {
             </div>
           </div>
         ))}
-        <button onClick={() => setIngredients([...ingredients, { name: '', amount: '', unit: 'g', calories_per_100g: '', protein_per_100g: '', fat_per_100g: '', carbs_per_100g: '' }])} className="w-full py-2 border border-surface0 rounded-xl text-subtext0">
+        <button onClick={() => setIngredients([...ingredients, { name: '', amount: '', unit: 'g', calories_per_100g: '', protein_per_100g: '', fat_per_100g: '', carbs_per_100g: '' }])} className="w-full py-2 border border-surface0 rounded-xl text-subtext0 hover:bg-surface0 transition-colors">
           + Добавить ингредиент
         </button>
 
-        <h3 className="font-semibold text-lavender mt-4">Шаги приготовления</h3>
+        <h3 className="font-semibold text-lavender mt-6">Шаги приготовления</h3>
         {steps.map((s, idx) => (
           <textarea 
             key={idx}
@@ -257,17 +271,21 @@ function RecipeCreate({ onBack, onSave }) {
             }} 
           />
         ))}
-        <button onClick={() => setSteps([...steps, ''])} className="w-full py-2 border border-surface0 rounded-xl text-subtext0">
+        <button onClick={() => setSteps([...steps, ''])} className="w-full py-2 border border-surface0 rounded-xl text-subtext0 hover:bg-surface0 transition-colors">
           + Добавить шаг
         </button>
 
-        <h3 className="font-semibold text-lavender mt-4">Итог</h3>
+        <h3 className="font-semibold text-lavender mt-6">Итог</h3>
         <input 
           className="w-full bg-surface0 p-3 rounded-xl outline-none" 
           type="number"
           placeholder="Вес ГОТОВОГО блюда (г)" 
           value={finalWeight} onChange={e => setFinalWeight(e.target.value)} 
         />
+
+        <button onClick={save} className="w-full bg-green text-crust font-bold text-lg py-4 rounded-xl mt-8 mb-8 active:scale-[0.98] transition-transform">
+          Сохранить рецепт
+        </button>
       </div>
     </div>
   )
