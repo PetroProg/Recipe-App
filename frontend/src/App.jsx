@@ -223,8 +223,19 @@ function RecipeDetail({ recipe, onBack, onDelete, onUpdate }) {
               <div key={idx} className="flex gap-2 items-start">
                 <span className="text-peach font-bold pt-2">{idx + 1}.</span>
                 <textarea
-                  className="w-full bg-mantle text-text p-2.5 rounded-xl outline-none min-h-[70px] text-sm resize-none focus:ring-1 focus:ring-lavender"
+                  className="w-full bg-mantle text-text p-3 rounded-xl outline-none min-h-[80px] text-sm resize-y focus:ring-1 focus:ring-lavender leading-relaxed"
+                  rows={3}
                   value={s}
+                  ref={el => {
+                    if (el) {
+                      el.style.height = 'auto'
+                      el.style.height = `${Math.max(80, el.scrollHeight)}px`
+                    }
+                  }}
+                  onInput={e => {
+                    e.target.style.height = 'auto'
+                    e.target.style.height = `${Math.max(80, e.target.scrollHeight)}px`
+                  }}
                   onChange={e => {
                     const newSteps = [...steps]
                     newSteps[idx] = e.target.value
@@ -370,9 +381,21 @@ function RecipeCreate({ onBack, onSave }) {
         {steps.map((s, idx) => (
           <textarea 
             key={idx}
-            className="w-full bg-surface0 p-3 rounded-xl outline-none min-h-[80px]" 
+            className="w-full bg-surface0 p-3 rounded-xl outline-none min-h-[80px] resize-y focus:ring-1 focus:ring-lavender leading-relaxed" 
+            rows={3}
             placeholder={`Шаг ${idx + 1}`} 
-            value={s} onChange={e => {
+            value={s}
+            ref={el => {
+              if (el) {
+                el.style.height = 'auto'
+                el.style.height = `${Math.max(80, el.scrollHeight)}px`
+              }
+            }}
+            onInput={e => {
+              e.target.style.height = 'auto'
+              e.target.style.height = `${Math.max(80, e.target.scrollHeight)}px`
+            }}
+            onChange={e => {
               const newS = [...steps]; newS[idx] = e.target.value; setSteps(newS)
             }} 
           />
