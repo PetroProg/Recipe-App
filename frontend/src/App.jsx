@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, ChevronLeft, Trash2, Copy, Check } from 'lucide-react'
+import { Plus, ChevronLeft, Trash2, Copy, Check, Pencil } from 'lucide-react'
 
 export default function App() {
   const [recipes, setRecipes] = useState([])
@@ -46,6 +46,10 @@ export default function App() {
           recipe={selectedRecipe} 
           onBack={() => setView('list')} 
           onDelete={() => deleteRecipe(selectedRecipe.id)}
+          onUpdate={(updated) => {
+            setSelectedRecipe(updated)
+            fetchRecipes()
+          }}
         />
       )}
       {view === 'create' && (
@@ -83,9 +87,17 @@ function RecipeList({ recipes, onOpen, onCreate }) {
   )
 }
 
-function RecipeDetail({ recipe, onBack, onDelete }) {
+function RecipeDetail({ recipe, onBack, onDelete, onUpdate }) {
   const [copied, setCopied] = useState(false)
   const [portion, setPortion] = useState(100)
+  const [isEditingSteps, setIsEditingSteps] = useState(false)
+  const [steps, setSteps] = useState(recipe.steps || [])
+  const [savingSteps, setSavingSteps] = useState(false)
+
+  useEffect(() => {
+    setSteps(recipe.steps || [])
+    setIsEditingSteps(false)
+  }, [recipe])
 
   // Calculate Macros
   let totalKcal = 0, totalP = 0, totalF = 0, totalC = 0;
@@ -112,6 +124,33 @@ function RecipeDetail({ recipe, onBack, onDelete }) {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const handleSaveSteps = async () => {
+    setSavingSteps(true)
+    try {
+      const cleanSteps = steps.filter(s => s.trim() !== '')
+      const res = await fetch(`/api/recipes/${recipe.id}/steps`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ steps: cleanSteps })
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setSteps(updated.steps)
+        setIsEditingSteps(false)
+        if (onUpdate) onUpdate(updated)
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setSavingSteps(false)
+    }
+  }
+
+  const handleCancelSteps = () => {
+    setSteps(recipe.steps || [])
+    setIsEditingSteps(false)
+  }
+
   return (
     <div className="p-4 max-w-md mx-auto pb-10">
       <div className="flex justify-between items-center mb-6 mt-4">
@@ -135,14 +174,81 @@ function RecipeDetail({ recipe, onBack, onDelete }) {
         ))}
       </div>
 
-      <h2 className="text-xl font-semibold mb-3 text-lavender">Приготовление</h2>
-      <div className="bg-surface0 rounded-2xl p-4 mb-8 space-y-4">
-        {recipe.steps.map((s, idx) => (
-          <div key={idx} className="flex gap-3">
-            <span className="text-peach font-bold">{idx + 1}.</span>
-            <span className="text-text leading-relaxed">{s}</span>
+      <div className="flex justify-between items-center mb-3">
+        <h2 className="text-xl font-semibold text-lavender">Приготовление</h2>
+        {!isEditingSteps ? (
+          <button 
+            onClick={() => setIsEditingSteps(true)}
+            className="flex items-center gap-1.5 text-xs text-subtext0 bg-surface0 hover:bg-mantle px-2.5 py-1.5 rounded-lg active:scale-95 transition-all text-lavender"
+          >
+            <Pencil size={14} />
+            <span>Изменить</span>
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={handleCancelSteps}
+              className="text-xs text-subtext0 hover:text-text px-2 py-1 rounded-lg"
+              disabled={savingSteps}
+            >
+              Отмена
+            </button>
+            <button 
+              onClick={handleSaveSteps}
+              disabled={savingSteps}
+              className="flex items-center gap-1 text-xs font-semibold text-crust bg-green px-3 py-1.5 rounded-lg active:scale-95 transition-all"
+            >
+              <Check size={14} />
+              <span>{savingSteps ? '...' : 'Сохранить'}</span>
+            </button>
           </div>
-        ))}
+        )}
+      </div>
+
+      <div className="bg-surface0 rounded-2xl p-4 mb-8 space-y-3">
+        {!isEditingSteps ? (
+          steps.length === 0 ? (
+            <p className="text-subtext0 text-sm">Шаги приготовления не указаны</p>
+          ) : (
+            steps.map((s, idx) => (
+              <div key={idx} className="flex gap-3">
+                <span className="text-peach font-bold">{idx + 1}.</span>
+                <span className="text-text leading-relaxed">{s}</span>
+              </div>
+            ))
+          )
+        ) : (
+          <>
+            {steps.map((s, idx) => (
+              <div key={idx} className="flex gap-2 items-start">
+                <span className="text-peach font-bold pt-2">{idx + 1}.</span>
+                <textarea
+                  className="w-full bg-mantle text-text p-2.5 rounded-xl outline-none min-h-[70px] text-sm resize-none focus:ring-1 focus:ring-lavender"
+                  value={s}
+                  onChange={e => {
+                    const newSteps = [...steps]
+                    newSteps[idx] = e.target.value
+                    setSteps(newSteps)
+                  }}
+                  placeholder={`Шаг ${idx + 1}`}
+                />
+                <button
+                  onClick={() => setSteps(steps.filter((_, i) => i !== idx))}
+                  className="text-red-400 p-2 hover:text-red-300 active:scale-90 transition-all flex-shrink-0"
+                  title="Удалить шаг"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={() => setSteps([...steps, ''])}
+              className="w-full py-2 border border-mantle rounded-xl text-subtext0 hover:text-text hover:bg-mantle text-sm transition-colors"
+            >
+              + Добавить шаг
+            </button>
+          </>
+        )}
       </div>
 
       <h2 className="text-xl font-semibold mb-3 text-lavender">Калькулятор КБЖУ</h2>

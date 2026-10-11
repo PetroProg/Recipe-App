@@ -100,6 +100,45 @@ def create_recipe(recipe: RecipeCreate, db: Session = Depends(get_db)):
         final_weight=db_recipe.final_weight
     )
 
+class StepsUpdate(BaseModel):
+    steps: list[str]
+
+@app.patch("/api/recipes/{recipe_id}/steps", response_model=RecipeResponse)
+def update_recipe_steps(recipe_id: int, data: StepsUpdate, db: Session = Depends(get_db)):
+    db_recipe = db.query(RecipeDB).filter(RecipeDB.id == recipe_id).first()
+    if not db_recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    filtered_steps = [s.strip() for s in data.steps if s.strip()]
+    db_recipe.steps = json.dumps(filtered_steps)
+    db.commit()
+    db.refresh(db_recipe)
+    return RecipeResponse(
+        id=db_recipe.id,
+        title=db_recipe.title,
+        ingredients=json.loads(db_recipe.ingredients),
+        steps=json.loads(db_recipe.steps),
+        final_weight=db_recipe.final_weight
+    )
+
+@app.put("/api/recipes/{recipe_id}", response_model=RecipeResponse)
+def update_recipe(recipe_id: int, recipe: RecipeCreate, db: Session = Depends(get_db)):
+    db_recipe = db.query(RecipeDB).filter(RecipeDB.id == recipe_id).first()
+    if not db_recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    db_recipe.title = recipe.title
+    db_recipe.ingredients = json.dumps([i.model_dump() for i in recipe.ingredients])
+    db_recipe.steps = json.dumps(recipe.steps)
+    db_recipe.final_weight = recipe.final_weight
+    db.commit()
+    db.refresh(db_recipe)
+    return RecipeResponse(
+        id=db_recipe.id,
+        title=db_recipe.title,
+        ingredients=json.loads(db_recipe.ingredients),
+        steps=json.loads(db_recipe.steps),
+        final_weight=db_recipe.final_weight
+    )
+
 @app.delete("/api/recipes/{recipe_id}")
 def delete_recipe(recipe_id: int, db: Session = Depends(get_db)):
     db_recipe = db.query(RecipeDB).filter(RecipeDB.id == recipe_id).first()
