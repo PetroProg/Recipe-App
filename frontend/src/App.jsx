@@ -298,29 +298,71 @@ function RecipeCreate({ onBack, onSave }) {
   const [finalWeight, setFinalWeight] = useState('')
   const [ingredients, setIngredients] = useState([{ name: '', amount: '', unit: 'g', calories_per_100g: '', protein_per_100g: '', fat_per_100g: '', carbs_per_100g: '' }])
   const [steps, setSteps] = useState([''])
+  const [saving, setSaving] = useState(false)
+
+  const parseNum = (val, defaultVal = 0) => {
+    if (val === undefined || val === null || val === '') return defaultVal
+    if (typeof val === 'number') return isNaN(val) ? defaultVal : val
+    const cleaned = String(val).replace(',', '.').trim()
+    const num = parseFloat(cleaned)
+    return isNaN(num) ? defaultVal : num
+  }
 
   const save = async () => {
-    const payload = {
-      title,
-      final_weight: parseFloat(finalWeight),
-      ingredients: ingredients.map(i => ({
-        name: i.name,
-        amount: parseFloat(i.amount),
-        unit: i.unit,
-        calories_per_100g: parseFloat(i.calories_per_100g),
-        protein_per_100g: parseFloat(i.protein_per_100g),
-        fat_per_100g: parseFloat(i.fat_per_100g),
-        carbs_per_100g: parseFloat(i.carbs_per_100g),
-      })),
-      steps: steps.filter(s => s.trim() !== '')
+    if (!title.trim()) {
+      alert('Пожалуйста, введите название блюда')
+      return
     }
 
-    await fetch('/api/recipes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-    onSave()
+    const validIngredients = ingredients
+      .filter(i => i.name.trim() !== '')
+      .map(i => ({
+        name: i.name.trim(),
+        amount: parseNum(i.amount, 0),
+        unit: i.unit || 'g',
+        calories_per_100g: parseNum(i.calories_per_100g, 0),
+        protein_per_100g: parseNum(i.protein_per_100g, 0),
+        fat_per_100g: parseNum(i.fat_per_100g, 0),
+        carbs_per_100g: parseNum(i.carbs_per_100g, 0),
+      }))
+
+    if (validIngredients.length === 0) {
+      alert('Пожалуйста, добавьте хотя бы один ингредиент с названием')
+      return
+    }
+
+    const validSteps = steps.map(s => s.trim()).filter(s => s !== '')
+    const finalW = parseNum(finalWeight, 0)
+
+    const payload = {
+      title: title.trim(),
+      final_weight: finalW > 0 ? finalW : 100,
+      ingredients: validIngredients,
+      steps: validSteps
+    }
+
+    setSaving(true)
+    try {
+      const res = await fetch('/api/recipes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        const msg = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail || 'Не удалось сохранить')
+        alert(`Ошибка при сохранении: ${msg}`)
+        return
+      }
+
+      onSave()
+    } catch (e) {
+      console.error(e)
+      alert(`Ошибка подключения к серверу: ${e.message}`)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -343,11 +385,31 @@ function RecipeCreate({ onBack, onSave }) {
         <h3 className="font-semibold text-lavender mt-6">Ингредиенты</h3>
         {ingredients.map((ing, idx) => (
           <div key={idx} className="bg-surface0 p-3 rounded-xl space-y-2">
-            <input className="w-full bg-mantle p-2 rounded outline-none" placeholder="Название (напр. Курица)" value={ing.name} onChange={e => {
-              const newI = [...ingredients]; newI[idx].name = e.target.value; setIngredients(newI)
-            }}/>
+            <div className="flex gap-2 items-center">
+              <input 
+                className="w-full bg-mantle p-2 rounded outline-none" 
+                placeholder="Название (напр. Курица)" 
+                value={ing.name} 
+                onChange={e => {
+                  const newI = [...ingredients]
+                  newI[idx].name = e.target.value
+                  setIngredients(newI)
+                }}
+              />
+              {ingredients.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setIngredients(ingredients.filter((_, i) => i !== idx))}
+                  className="text-red-400 p-2 hover:text-red-300 active:scale-90 transition-all flex-shrink-0"
+                  title="Удалить ингредиент"
+                >
+                  <Trash2 size={18} />
+                </button>
+              )}
+            </div>
+
             <div className="flex gap-2">
-              <input className="w-1/3 bg-mantle p-2 rounded outline-none" type="number" placeholder="Кол-во" value={ing.amount} onChange={e => {
+              <input className="w-1/3 bg-mantle p-2 rounded outline-none" type="text" inputMode="decimal" placeholder="Кол-во" value={ing.amount} onChange={e => {
                 const newI = [...ingredients]; newI[idx].amount = e.target.value; setIngredients(newI)
               }}/>
               <select className="w-1/3 bg-mantle p-2 rounded outline-none text-sm" value={ing.unit} onChange={e => {
@@ -356,18 +418,18 @@ function RecipeCreate({ onBack, onSave }) {
                 <option value="g">г</option>
                 <option value="pcs">шт</option>
               </select>
-              <input className="w-1/3 bg-mantle p-2 rounded outline-none text-sm" type="number" placeholder={ing.unit === 'g' ? "Ккал/100г" : "Ккал/1шт"} value={ing.calories_per_100g} onChange={e => {
+              <input className="w-1/3 bg-mantle p-2 rounded outline-none text-sm" type="text" inputMode="decimal" placeholder={ing.unit === 'g' ? "Ккал/100г" : "Ккал/1шт"} value={ing.calories_per_100g} onChange={e => {
                 const newI = [...ingredients]; newI[idx].calories_per_100g = e.target.value; setIngredients(newI)
               }}/>
             </div>
             <div className="flex gap-2">
-              <input className="w-1/3 bg-mantle p-2 rounded outline-none text-sm" type="number" placeholder={ing.unit === 'g' ? "Б (на 100)" : "Б (на 1шт)"} value={ing.protein_per_100g} onChange={e => {
+              <input className="w-1/3 bg-mantle p-2 rounded outline-none text-sm" type="text" inputMode="decimal" placeholder={ing.unit === 'g' ? "Б (на 100)" : "Б (на 1шт)"} value={ing.protein_per_100g} onChange={e => {
                 const newI = [...ingredients]; newI[idx].protein_per_100g = e.target.value; setIngredients(newI)
               }}/>
-              <input className="w-1/3 bg-mantle p-2 rounded outline-none text-sm" type="number" placeholder={ing.unit === 'g' ? "Ж (на 100)" : "Ж (на 1шт)"} value={ing.fat_per_100g} onChange={e => {
+              <input className="w-1/3 bg-mantle p-2 rounded outline-none text-sm" type="text" inputMode="decimal" placeholder={ing.unit === 'g' ? "Ж (на 100)" : "Ж (на 1шт)"} value={ing.fat_per_100g} onChange={e => {
                 const newI = [...ingredients]; newI[idx].fat_per_100g = e.target.value; setIngredients(newI)
               }}/>
-              <input className="w-1/3 bg-mantle p-2 rounded outline-none text-sm" type="number" placeholder={ing.unit === 'g' ? "У (на 100)" : "У (на 1шт)"} value={ing.carbs_per_100g} onChange={e => {
+              <input className="w-1/3 bg-mantle p-2 rounded outline-none text-sm" type="text" inputMode="decimal" placeholder={ing.unit === 'g' ? "У (на 100)" : "У (на 1шт)"} value={ing.carbs_per_100g} onChange={e => {
                 const newI = [...ingredients]; newI[idx].carbs_per_100g = e.target.value; setIngredients(newI)
               }}/>
             </div>
@@ -407,13 +469,18 @@ function RecipeCreate({ onBack, onSave }) {
         <h3 className="font-semibold text-lavender mt-6">Итог</h3>
         <input 
           className="w-full bg-surface0 p-3 rounded-xl outline-none" 
-          type="number"
+          type="text"
+          inputMode="decimal"
           placeholder="Вес ГОТОВОГО блюда (г)" 
           value={finalWeight} onChange={e => setFinalWeight(e.target.value)} 
         />
 
-        <button onClick={save} className="w-full bg-green text-crust font-bold text-lg py-4 rounded-xl mt-8 mb-8 active:scale-[0.98] transition-transform">
-          Сохранить рецепт
+        <button 
+          onClick={save} 
+          disabled={saving}
+          className="w-full bg-green text-crust font-bold text-lg py-4 rounded-xl mt-8 mb-8 active:scale-[0.98] transition-transform disabled:opacity-50"
+        >
+          {saving ? 'Сохранение...' : 'Сохранить рецепт'}
         </button>
       </div>
     </div>

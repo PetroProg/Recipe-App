@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, Column, Integer, String, Float, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 import json
 
 # Database setup
@@ -49,19 +49,40 @@ def get_db():
 
 # Pydantic models
 class Ingredient(BaseModel):
-    name: str
-    amount: float # in grams or pieces
-    calories_per_100g: float
-    protein_per_100g: float
-    fat_per_100g: float
-    carbs_per_100g: float
+    name: str = ""
+    amount: float = 0.0 # in grams or pieces
+    calories_per_100g: float = 0.0
+    protein_per_100g: float = 0.0
+    fat_per_100g: float = 0.0
+    carbs_per_100g: float = 0.0
     unit: str = "g"
 
+    @field_validator('amount', 'calories_per_100g', 'protein_per_100g', 'fat_per_100g', 'carbs_per_100g', mode='before')
+    @classmethod
+    def parse_float_fields(cls, v):
+        if v is None or v == '':
+            return 0.0
+        try:
+            return float(str(v).replace(',', '.').strip())
+        except (ValueError, TypeError):
+            return 0.0
+
 class RecipeCreate(BaseModel):
-    title: str
-    ingredients: list[Ingredient]
-    steps: list[str]
-    final_weight: float
+    title: str = "Новый рецепт"
+    ingredients: list[Ingredient] = []
+    steps: list[str] = []
+    final_weight: float = 100.0
+
+    @field_validator('final_weight', mode='before')
+    @classmethod
+    def parse_final_weight(cls, v):
+        if v is None or v == '':
+            return 100.0
+        try:
+            val = float(str(v).replace(',', '.').strip())
+            return val if val > 0 else 100.0
+        except (ValueError, TypeError):
+            return 100.0
 
 class RecipeResponse(RecipeCreate):
     id: int
