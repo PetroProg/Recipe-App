@@ -280,6 +280,35 @@ def export_backup(db: Session = Depends(get_db)):
             detail=f"Ошибка создания резервной копии: {str(e)}"
         )
 
+class BackupImport(BaseModel):
+    version: int = 1
+    recipes: list[RecipeCreate] = Field(default=[], max_length=500)
+
+@app.post("/api/backup/import")
+def import_backup(data: BackupImport, db: Session = Depends(get_db)):
+    if not data.recipes:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Файл бэкапа не содержит рецептов")
+    
+    count = 0
+    try:
+        for r in data.recipes:
+            db_recipe = RecipeDB(
+                title=r.title,
+                ingredients=json.dumps([i.model_dump() for i in r.ingredients], ensure_ascii=False),
+                steps=json.dumps(r.steps, ensure_ascii=False),
+                final_weight=r.final_weight
+            )
+            db.add(db_recipe)
+            count += 1
+        db.commit()
+        return {"ok": True, "imported_count": count}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка импорта резервной копии: {str(e)}"
+        )
+
 # Serve React App
 if os.path.exists("frontend/dist"):
     app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="frontend")
